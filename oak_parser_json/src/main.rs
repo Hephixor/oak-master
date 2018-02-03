@@ -7,7 +7,7 @@ use oak_runtime::*;
 grammar! json {
   // #![show_api]
 
-  well_formed_json = lbrace json_value* rbrace
+  well_formed_json = lbrace json_value? (("," json_value)+)? rbrace
   expression
     = term (term_op term)* > fold_left
 
@@ -34,14 +34,17 @@ grammar! json {
 
   json_value
     = json_array
+    / json_object
+    / json_members
+    / json_pair
 
   json_array
     = lbracket json_chars (("," json_chars)+)? rbracket
     / lbracket number (("," number)+)? rbracket
     / lbracket json_object (("," json_object)+)? rbracket
-    ((lbracket json_chars (("," json_chars)+)? rbracket
-    / lbracket number (("," number)+)? rbracket
-    / lbracket json_object (("," json_object)+)? rbracket)+)?
+    (("," lbracket json_chars (("," json_chars)+)? rbracket
+    / "," lbracket number (("," number)+)? rbracket
+    / "," lbracket json_object (("," json_object)+)? rbracket)+)?
 
   json_object
     = lbrace json_members? rbracket
