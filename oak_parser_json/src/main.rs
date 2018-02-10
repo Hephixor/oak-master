@@ -5,218 +5,171 @@ extern crate oak_runtime;
 use oak_runtime::*;
 
 grammar! json {
-  // #![show_api]
+    // #![show_api]
+    program = lbrace spacing json_value rbrace
+    // well_formed_json = lbrace json_expr? (("," json_expr)+)? rbrace
+    //JSON
+    json_value
+    = json_pair (coma json_pair)* > make_json_value
 
-  well_formed_json = lbrace json_value? (("," json_value)+)? rbrace
-  expression
-    = term (term_op term)* > fold_left
+    json_expr
+    = number > make_json_number
+    /   json_string > make_json_string
+    /   json_array > make_json_array
 
-  term
-    = exponent (factor_op exponent)* > fold_left
-
-  exponent
-    = (factor exponent_op)* factor > fold_right
-
-  factor
-    = number > number_expr
-    / lparen expression rparen
-
-
-  term_op
-    = add_op > add_bin_op
-    / sub_op > sub_bin_op
-
-  factor_op
-    = mul_op > mul_bin_op
-    / div_op > div_bin_op
-
-  exponent_op = exp_op > exp_bin_op
-
-  json_value
-    = json_array
-    / json_object
-    / json_members
-    / json_pair
-
-  json_array
-    = lbracket json_chars (("," json_chars)+)? rbracket
-    / lbracket number (("," number)+)? rbracket
-    / lbracket json_object (("," json_object)+)? rbracket
-    (("," lbracket json_chars (("," json_chars)+)? rbracket
-    / "," lbracket number (("," number)+)? rbracket
-    / "," lbracket json_object (("," json_object)+)? rbracket)+)?
-
-  json_object
+    json_object
     = lbrace json_members? rbracket
 
-  json_members
-    = json_pair (("," json_pair)+)?
+    json_members
+    = json_pair (coma json_pair)* > make_json_value
 
-  json_pair
-    = json_string ":" json_string
-    / json_string ":" number
-    / json_string ":" json_object
-    / json_string ":" json_array
-    / json_string ":" json_string
-    / json_string ":" "True"
-    / json_string ":" "False"
-    / json_string ":" "null"
+    json_pair
+    = json_string colon json_expr > make_json_pair
 
-  spacing = [" \n\r\t"]* -> (^)
-  digit = ["0-9"]
-  number = digit+ spacing > to_number
-  not_zero_digit = ["1-9"]
-  digits = digit+
- // not_zero_number = not_zero_digit digit+ spacing > to_number
-  negative_number = "-" number
-  negative_digit = "-" not_zero_digit
+    json_array
+    = lbracket (json_expr coma)* json_expr spacing rbracket
 
-  json_string
-    = "\"" json_chars "\""
+    //Generic Types
+    dquote = "\"" -> (^)
+    spacing = [" \n\r\t"]* -> (^)
+    digit = ["0-9"]
+    colon = ":" spacing -> (^)
+    semicolon = ";" spacing -> (^)
+    coma = "," spacing -> (^)
+    number = digit+ spacing > to_number
+    not_zero_digit = ["1-9"]
+    digits = digit+
+    // not_zero_number = not_zero_digit digit+ spacing > to_number
+    // negative_number = "-" number
+    // negative_digit = "-" not_zero_digit
 
-  json_chars
-    = json_char (json_char+)?
+    json_string
+    = dquote json_char+ dquote spacing > to_string
 
-  json_char
-    = ["a-zA-Z"]
+    json_char
+    = ["a-zA-Z"] spacing
 
-  // json_char
-  //   = ["a-zA-Z"]
-  //   / "\""
-  //   / "\\"
-  //   / "\/"
-  //   / "\b"
-  //   / "\f"
-  //   / "\n"
-  //   / "\r"
-  //   / "\t"
-  //   / "\u{digit digit digit digit}"
+    lparen = "(" spacing -> (^)
+    rparen = ")" spacing -> (^)
+    lbracket = "[" spacing -> (^)
+    rbracket = "]" spacing -> (^)
+    lbrace = "{" spacing -> (^)
+    rbrace = "}" spacing -> (^)
 
-  json_number
-    = int exp?
+    use std::str::FromStr;
 
-  int
-    = digit
-    / negative_digit
+    pub type PExpr = Box<JSONPair>;
 
-  ints
-    = not_zero_digit digits
-    / "-" not_zero_digit digits
+    //Enums
+    #[derive(Debug)]
+    pub enum JSONExpr {
+        Str(String),
+        Number(u32),
+        Array(Vec<Box<JSONExpr>>)
+    }
 
-  //frac = "." digits > to_number // erreur converti float en int ?
-  exp
-    = e digits
-  e
-    = "e"
-    / "e+"
-    / "e-"
-    / "E"
-    / "E+"
-    / "E-"
+    #[derive(Debug)]
+    pub enum JSONPair {
+        Pair(String, Box<JSONExpr>),
+        Json(Vec<Box<JSONPair>>)
+    }
 
+    //Functions
 
+    fn make_json_number(number:u32)-> Box<JSONExpr> {
+        Box::new(JSONExpr::Number(number))
+    }
 
+    fn make_json_string(string:String) -> Box<JSONExpr> {
+        Box::new(JSONExpr::Str(string))
+    }
 
-  bind_op = "=" spacing
-  add_op = "+" spacing
-  sub_op = "-" spacing
-  mul_op = "*" spacing
-  div_op = "/" spacing
-  exp_op = "^" spacing
-  lparen = "(" spacing
-  rparen = ")" spacing
-  lbracket = "[" spacing
-  rbracket = "]" spacing
-  lbrace = "{" spacing
-  rbrace = "}" spacing
+    fn make_json_pair(string:String, expr:Box<JSONExpr>) -> PExpr {
+        Box::new(JSONPair::Pair(string,expr))
+    }
 
-  use std::str::FromStr;
-  use self::Expression::*;
-  use self::BinOp::*;
+    fn make_json_array(array:Vec<Box<JSONExpr>>, front:Box<JSONExpr>) -> Box<JSONExpr> {
+        let mut vector = Vec::new();
+        for i in array{
+            vector.push(i);
+        }
+        vector.push(front);
+        Box::new(JSONExpr::Array(vector))
+    }
 
-  pub type PExpr = Box<Expression>;
+    fn make_json_value(pair: Box<JSONPair>, rest: Vec<Box<JSONPair>>) -> PExpr {
+        let mut vector = vec![pair];
+        for i in rest{
+            vector.push(i);
+        }
+        Box::new(JSONPair::Json(vector))
+    }
 
-  #[derive(Debug)]
-  pub enum Expression {
-    Variable(String),
-    Number(u32),
-    BinaryExpr(BinOp, PExpr, PExpr),
-    LetIn(String, PExpr, PExpr)
-  }
-
-  #[derive(Debug)]
-  pub enum BinOp {
-    Add, Sub, Mul, Div, Exp
-  }
-
-  #[derive(Debug)]
-  pub enum Bool {
-    True, False
-  }
-
-  fn to_number(raw_text: Vec<char>) -> u32 {
-    u32::from_str(&*to_string(raw_text)).unwrap()
-  }
-
-  fn number_expr(value: u32) -> PExpr {
-    Box::new(Number(value))
-  }
+    fn to_number(raw_text: Vec<char>) -> u32 {
+        u32::from_str(&*to_string(raw_text)).unwrap()
+    }
 
 
-  fn to_string(raw_text: Vec<char>) -> String {
-    raw_text.into_iter().collect()
-  }
+    fn to_string(raw_text: Vec<char>) -> String {
+        raw_text.into_iter().collect()
+    }
 
-  fn fold_left(head: PExpr, rest: Vec<(BinOp, PExpr)>) -> PExpr {
-    rest.into_iter().fold(head,
-      |accu, (op, expr)| Box::new(BinaryExpr(op, accu, expr)))
-  }
-
-  fn fold_right(front: Vec<(PExpr, BinOp)>, last: PExpr) -> PExpr {
-    front.into_iter().rev().fold(last,
-      |accu, (expr, op)| Box::new(BinaryExpr(op, expr, accu)))
-  }
-
-
-  fn add_bin_op() -> BinOp { Add }
-  fn sub_bin_op() -> BinOp { Sub }
-  fn mul_bin_op() -> BinOp { Mul }
-  fn div_bin_op() -> BinOp { Div }
-  fn exp_bin_op() -> BinOp { Exp }
 }
 
 
-// fn analyse_state(state: ParseState<StrStream, json::PExpr>) {
-//   use oak_runtime::parse_state::ParseResult::*;
-//   match state.into_result() {
-//     Success(data) => println!("Full match: {:?}", data),
-//     Partial(data, expectation) => {
-//       println!("Partial match: {:?} because: {:?}", data, expectation);
-//     }
-//     Failure(expectation) => {
-//       println!("Failure: {:?}", expectation);
-//     }
-//   }
-// }
-//
-// #[test]
-// fn parse_json(){
-//     let json_fail =" 2 * 1 }";
-//     //println!("{:?}", json::parse_program(json_fail.into_state()).into_result());
-//     analyse_state(json::parse_well_formed_json(json_fail.into_state()));
-//
-// }
+fn analyse_state(state: ParseState<StrStream, json::PExpr>)  {
+    use oak_runtime::parse_state::ParseResult::*;
+    match state.into_result() {
+        Success(data) => println!("Full match: {:?}", data),
+        Partial(data, expectation) => {
+            println!("Partial match: {:?} because {:?}", data, expectation);
+        }
+        Failure(expectation) => {
+            println!("Failure: {:?}", expectation);
+        }
+    }
+}
 
 fn main() {
-  //analyse_state(json::parse_program("{ 2 + 4 }".into_state())); // Complete
-  // analyse_state(json::parse_program("2 *  ".into_state())); // Partial
-  // analyse_state(json::parse_program("  * a".into_state())); // Erroneous
+    // analyse_state(json::parse_program("{\"ue\" : \"pstl\" }".into_state())); // Complete
+    //  analyse_state(json::parse_program("{\"ue\" : \"pstl\", ".into_state())); // Partial
+    //  analyse_state(json::parse_program("{\"pstl\"".into_state())); // Error
 
-  // let json_pass ="{1}";
-  // analyse_state(json::parse_well_formed_json(json_pass.into_state()));
-  //
-  // let json_fail =" 2 * 1 }";
-  // //println!("{:?}", json::parse_program(json_fail.into_state()).into_result());
-  // analyse_state(json::parse_well_formed_json(json_fail.into_state()));
+    let json =
+    "{
+        \"ue\" : \"pst\",
+        \"note\" : [20, 21, 22],
+        \"enseignement\" : \"ptal sensei\"
+    }";
+    let mut sjson = json.into_state();
+    analyse_state(json::parse_program(sjson));
+
+    let json_full =
+
+    "{
+        \"glossary\":{
+            \"title\":\" example glossary\",
+            \"GlossDiv\":{
+                \"title\": \"S\",
+                \"GlossList\":{
+                    \"GlossEntry\":{
+                        \"ID\": \"SGML\",
+                        \"SortAs\": \"SGML\",
+                        \"GlossTerm\": \"Standard Generalized Markup Language\",
+                        \"Acronym\": \"SGML\",
+                        \"Abbrev\": \"ISO 8879:1986\",
+                        \"GlossDef\":{
+                            \"para\": \"A meta-markup language, used to create markup languages such as DocBook.\",
+                            \"GlossSeeAlso\": [\"GML\", \"XML\"]
+                        },
+                        \"GlossSee\": \"markup\"
+                    }
+                }
+            }
+        }
+    }" ;
+
+    sjson = json_full.into_state();
+    analyse_state(json::parse_program(sjson));
 
 }
