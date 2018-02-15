@@ -135,7 +135,7 @@ fn analyse_state(state: ParseState<StrStream, json::PExpr>)  {
 
 fn main() {
      analyse_state(json::parse_program(r##"{"ue" : "pstl" }"##.into_state())); // Complete
-     analyse_state(json::parse_program(r##"{"ue" : "pstl", "##.into_state())); // Partial
+     analyse_state(json::parse_program(r##"{"ue" : "pstl"} , "##.into_state())); // Partial
      analyse_state(json::parse_program(r##"{"pstl""##.into_state())); // Error
 
     let json =
