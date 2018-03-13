@@ -52,9 +52,9 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
           let (_ , last_and) = self.and_and.pop().expect("error");
           let lo = self.grammar[first_and].span().lo();
           let hi = self.grammar[last_and].span().lo();
-          self.grammar.cx.span_warn(
+          self.grammar.span_note(
               Span::new(lo,hi,NO_EXPANSION),
-              "Detected useless chaining: multiple & \n Help: &(&e) -> &e"
+              "Detected useless chaining: multiple & \n Help: &(&e) -> &e".to_string()
           );
       }
       self.and_and.clear();
