@@ -1,3 +1,0 @@
-pick
-| when store |= x > 9 -> par end
-| skip

@@ -1,5 +1,0 @@
-pick
-| when store |= 8 > 9 ->
-    pick
-    | when store |= x <= y -> skip
-    | when store |= id > oups -> skip

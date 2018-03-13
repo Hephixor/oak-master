@@ -1,2 +1,0 @@
-unless x > 8 |= store next
-par || skip || skip

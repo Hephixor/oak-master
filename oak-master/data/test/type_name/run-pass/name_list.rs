@@ -1,1 +1,0 @@
-Operator(Sum, Plus, Minus, Div)

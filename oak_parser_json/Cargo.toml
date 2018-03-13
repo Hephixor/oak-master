@@ -1,8 +1,0 @@
-[package]
-name = "oak_parser_json"
-version = "0.1.0"
-authors = ["skylab"]
-
-[dependencies]
-oak = "*"
-oak_runtime = "*"

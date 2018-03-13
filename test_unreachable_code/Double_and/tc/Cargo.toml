@@ -1,6 +1,0 @@
-[package]
-name = "tc"
-version = "0.1.0"
-authors = ["Hephixor <wsergeant.t@gmail.com>"]
-
-[dependencies]
