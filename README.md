@@ -23,6 +23,9 @@ e+* ~ e+
 e*+ ~ infinite loop
 ```
 
+The aim is to analyze AST in order to catch useless chaining occurences by identiying nodes consituting unoptimized chains.
+We use visitors to identify each AST node and mark chains such as & ! + * and fill a vector of following characters then reducing it to give developpers advice about potential optimizations in their rule definition.
+
 
 # H1
 ## H2
